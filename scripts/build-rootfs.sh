@@ -9,6 +9,7 @@ aur_dir=
 components=
 artifacts=
 protected_package_dir=
+compat_package_dir=
 skip_official=0
 skip_aur=0
 
@@ -24,6 +25,8 @@ Options:
   --artifacts DIR        rootfs-shaped compiled component artifacts
   --protected-package-dir DIR
                          exact kernel/firmware packages captured from device
+  --compat-package-dir DIR
+                         temporary ABI-coherence seed packages; not protected
   --skip-official        do not run the official package transaction
   --skip-aur             allow a base-only rootfs without the AUR layer
 EOF
@@ -37,6 +40,7 @@ while [ "$#" -gt 0 ]; do
 		--components) components=$2; shift 2 ;;
 		--artifacts) artifacts=$2; shift 2 ;;
 		--protected-package-dir) protected_package_dir=$2; shift 2 ;;
+		--compat-package-dir) compat_package_dir=$2; shift 2 ;;
 		--skip-official) skip_official=1; shift ;;
 		--skip-aur) skip_aur=1; shift ;;
 		-h|--help) usage; exit 0 ;;
@@ -85,6 +89,7 @@ protected_version() {
 declare -A seen=()
 official_args=()
 protected_files=()
+compat_files=()
 
 if [ -n "$protected_package_dir" ]; then
 	[ -d "$protected_package_dir" ] || {
@@ -113,6 +118,16 @@ if [ -n "$protected_package_dir" ]; then
 		}
 		protected_files+=("$match")
 	done
+fi
+
+if [ -n "$compat_package_dir" ]; then
+	[ -d "$compat_package_dir" ] || {
+		echo "missing compatibility package directory: $compat_package_dir" >&2
+		exit 1
+	}
+	shopt -s nullglob
+	compat_files=("$compat_package_dir"/*.pkg.tar.*)
+	shopt -u nullglob
 fi
 
 for package in "${packages[@]}" "${tools[@]}"; do
@@ -165,6 +180,13 @@ if [ "$skip_official" -eq 0 ]; then
 		pacman --config "$pacman_conf" --root "$root" \
 			--dbpath "$root/var/lib/pacman" --cachedir "$root/var/cache/pacman/pkg" \
 			"${pacman_sandbox_args[@]}" -U --nodeps --noconfirm "${protected_files[@]}"
+	fi
+	if [ "${#compat_files[@]}" -gt 0 ]; then
+		# Compatibility seeds solve transient rolling-repository ABI gaps. They
+		# are not added to the protected-package policy and remain upgradeable.
+		pacman --config "$pacman_conf" --root "$root" \
+			--dbpath "$root/var/lib/pacman" --cachedir "$root/var/cache/pacman/pkg" \
+			"${pacman_sandbox_args[@]}" -U --nodeps --noconfirm "${compat_files[@]}"
 	fi
 	pacman --config "$pacman_conf" --root "$root" \
 		--dbpath "$root/var/lib/pacman" --cachedir "$root/var/cache/pacman/pkg" \

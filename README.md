@@ -81,6 +81,11 @@ standard x86-to-ARM64 qemu container does not inherit Landlock support from
 the host kernel; set `MEOWARCH_DISABLE_PACMAN_SANDBOX=0` on a native host
 where Landlock is available.
 
+`compat-pkgs/` is an optional local-only escape hatch for transient rolling
+repository ABI gaps (currently the Hyprland/aquamarine transition). These
+packages are installed as initial seeds but are not added to `IgnorePkg` or
+the protected-package hook; they remain upgradeable.
+
 ## pacman protection
 
 `config/pacman/99-meowarch-protected.conf` is installed into the target
