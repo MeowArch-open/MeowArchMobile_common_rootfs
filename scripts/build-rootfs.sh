@@ -91,29 +91,28 @@ if [ -n "$protected_package_dir" ]; then
 		echo "missing protected package directory: $protected_package_dir" >&2
 		exit 1
 	}
+	declare -A protected_file_by_name=()
 	shopt -s nullglob
+	candidates=("$protected_package_dir"/*.pkg.tar.*)
+	shopt -u nullglob
+	for candidate in "${candidates[@]}"; do
+		info=$(pacman --config /dev/null -Qp -i "$candidate")
+		got_package=$(sed -n 's/^Name[[:space:]]*: //p' <<<"$info")
+		got_version=$(sed -n 's/^Version[[:space:]]*: //p' <<<"$info")
+		[ -n "$got_package" ] || continue
+		[ -n "${protected_names[$got_package]+yes}" ] || continue
+		[ "$got_version" = "${protected_names[$got_package]}" ] || continue
+		protected_file_by_name["$got_package"]=$candidate
+	done
 	for package in "${!protected_names[@]}"; do
 		version=${protected_names[$package]}
-		candidates=("$protected_package_dir/$package-$version-"*.pkg.tar.*)
-		shopt -u nullglob
-		match=
-		for candidate in "${candidates[@]}"; do
-			info=$(pacman --config /dev/null -Qp -i "$candidate")
-			got_package=$(sed -n 's/^Name[[:space:]]*: //p' <<<"$info")
-			got_version=$(sed -n 's/^Version[[:space:]]*: //p' <<<"$info")
-			[ "$got_package" = "$package" ] || continue
-			[ "$got_version" = "$version" ] || continue
-			match=$candidate
-			break
-		done
+		match=${protected_file_by_name[$package]-}
 		[ -n "$match" ] || {
 			echo "missing exact protected package: $package=$version in $protected_package_dir" >&2
 			exit 1
 		}
 		protected_files+=("$match")
-		shopt -s nullglob
 	done
-	shopt -u nullglob
 fi
 
 for package in "${packages[@]}" "${tools[@]}"; do
