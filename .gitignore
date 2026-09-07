@@ -1,0 +1,7 @@
+/.work/
+/out/
+/rootfs/
+/sources/
+*.pkg.tar.*
+*.img
+*.tar.zst

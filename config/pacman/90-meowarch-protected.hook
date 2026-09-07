@@ -1,0 +1,24 @@
+[Trigger]
+Type = Package
+Operation = Install
+Operation = Upgrade
+Operation = Remove
+Target = linux
+Target = linux-aarch64
+Target = linux-headers
+Target = linux-aarch64-headers
+Target = linux-lts
+Target = linux-lts-headers
+Target = linux-zen
+Target = linux-zen-headers
+Target = linux-api-headers
+Target = linux-firmware
+Target = linux-firmware-*
+Target = wireless-regdb
+
+[Action]
+Description = Refusing to change the MeowArch kernel or firmware set
+When = PreTransaction
+NeedsTargets
+Exec = /usr/local/libexec/meowarch/block-protected-transaction
+AbortOnFail

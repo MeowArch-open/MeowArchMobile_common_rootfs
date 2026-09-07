@@ -1,0 +1,4 @@
+# Present in the device snapshot as orphan packages. They are useful for
+# building AUR packages and inspecting the bring-up environment.
+go
+jq

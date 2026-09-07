@@ -1,0 +1,10 @@
+# package<TAB>version<TAB>AUR git commit<TAB>target architecture<TAB>kind
+# clash-geoip is a transitive runtime dependency of the current mihomo recipe;
+# it was not installed in the device snapshot but is required by this build.
+clash-geoip	202606182327-1	22c5005902e0b01a07f12e6a832909743c86e74d	any	data
+cc-switch-bin	3.20.1-1	8124537055fe15dc1ba30b7c21f6ce3440c5d075	aarch64	binary
+hmcl-bin	3.16.3-1	0dc9e3d5178874315c999ba78adf684640890415	any	binary
+mihomo	1.19.30-1	5941932b82bc32b9fe993a1ee3883335330f3702	aarch64	source
+rustdesk-bin	1.4.9-1	ff2fab30723a15a37654a656862fb722b979aeda	aarch64	binary
+visual-studio-code-bin	1.136.1-1	70a29667af6ac26dc2631a1910ac356924066b48	aarch64	binary
+yay	13.0.1-1	cb43f84828ab4f9700f7c6f9c6d7a923d4cfaff0	aarch64	source

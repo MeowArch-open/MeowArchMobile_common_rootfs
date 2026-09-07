@@ -1,0 +1,7 @@
+# repository<TAB>path in components root<TAB>revision<TAB>role
+MeowArchMobile_sm8650AB_devicetree	common	0978ae5d96908f209bcf69976e607718db56b403	shared DT snapshots and recovery helpers
+MeowArchMobile_sm8650AB_Display	display	a1db8d51444bab7d21bf433b2b7320c6f924d2dd	DPU/DSC/DSI/panel runtime
+MeowArchMobile_sm8650AB_Audio	audio	07b11c70b0271959d4c7aae5d418a429051855a7	AudioReach/ALSA runtime
+MeowArchMobile_sm8650AB_Touch	touch	cb907533e92daa59841d9047b11e186930279e2b	FocalTech runtime
+MeowArch_sm8650AB_Modem	modem	56582561ec4377271cf73524c3b350ee2e593cd4	Modem/IPA/QMI runtime
+MeowArchMobile_sm8650AB_Wifi	wifi	b8027a046b60934d389dd84d96dd5fd8da2f6c4c	Wi-Fi runtime

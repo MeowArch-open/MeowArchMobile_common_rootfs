@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+targets=()
+while IFS= read -r target; do
+	[ -n "$target" ] && targets+=("$target")
+done
+
+echo "meowarch: refusing a pacman transaction touching protected packages:" >&2
+printf '  %s\n' "${targets[@]:-kernel/firmware}" >&2
+echo "meowarch: update the protected lock and release policy deliberately if this is intended" >&2
+exit 1

@@ -1,0 +1,16 @@
+# package<TAB>version<TAB>reason
+linux-aarch64	7.0.11-2	kernel package retained in the rootfs; the booted Image is built separately
+linux-api-headers	7.0-1	kernel userspace ABI headers
+linux-firmware	20260519-1	firmware
+linux-firmware-amdgpu	20260519-1	firmware
+linux-firmware-atheros	20260519-1	firmware
+linux-firmware-broadcom	20260519-1	firmware
+linux-firmware-cirrus	20260519-1	firmware
+linux-firmware-intel	20260519-1	firmware
+linux-firmware-mediatek	20260519-1	firmware
+linux-firmware-nvidia	20260519-1	firmware
+linux-firmware-other	20260519-1	firmware
+linux-firmware-radeon	20260519-1	firmware
+linux-firmware-realtek	20260519-1	firmware
+linux-firmware-whence	20260519-1	firmware metadata
+wireless-regdb	2026.05.30-1	wireless regulatory data coupled to the device image
