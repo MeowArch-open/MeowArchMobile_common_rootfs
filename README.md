@@ -67,6 +67,9 @@ not source builds merely because they are built by this repository.
 `build-rootfs.sh` does not silently fetch a different kernel or firmware
 version. The versions in `profiles/zorn/packages.protected.tsv` are requested
 explicitly; if the configured mirror no longer carries one, the build fails.
+The target rootfs has a separate pacman database, so the assembly step first
+synchronizes the configured repository databases into that target before
+resolving the official package profile.
 
 ## pacman protection
 

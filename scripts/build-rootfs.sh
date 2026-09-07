@@ -95,6 +95,11 @@ if [ "$skip_official" -eq 0 ]; then
 	# Run this in an Arch ARM environment (or an equivalent aarch64 chroot).
 	# The protected versions are part of the transaction, so an unavailable
 	# historical package causes a hard failure instead of a silent upgrade.
+	# The target root has its own empty dbpath; sync its repository databases
+	# before resolving the official package set.
+	pacman --config "$pacman_conf" --root "$root" \
+		--dbpath "$root/var/lib/pacman" --cachedir "$root/var/cache/pacman/pkg" \
+		-Sy --noconfirm
 	pacman --config "$pacman_conf" --root "$root" \
 		--dbpath "$root/var/lib/pacman" --cachedir "$root/var/cache/pacman/pkg" \
 		-S --needed --noconfirm "${official_args[@]}"
