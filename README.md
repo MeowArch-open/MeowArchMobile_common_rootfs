@@ -70,6 +70,12 @@ explicitly; if the configured mirror no longer carries one, the build fails.
 The target rootfs has a separate pacman database, so the assembly step first
 synchronizes the configured repository databases into that target before
 resolving the official package profile.
+When the protected versions are no longer on the live mirror, pass
+`--protected-package-dir` with exact package files captured from the device.
+Those packages are installed first with dependency checking disabled; the
+ordinary transaction then resolves against the already-installed protected
+versions. The Builder automatically uses `protected-pkgs/` at the manifest
+workspace root when that directory exists.
 The builder disables pacman's downloader sandbox by default because the
 standard x86-to-ARM64 qemu container does not inherit Landlock support from
 the host kernel; set `MEOWARCH_DISABLE_PACMAN_SANDBOX=0` on a native host

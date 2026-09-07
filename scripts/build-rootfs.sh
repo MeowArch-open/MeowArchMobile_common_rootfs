@@ -8,6 +8,7 @@ pacman_conf=/etc/pacman.conf
 aur_dir=
 components=
 artifacts=
+protected_package_dir=
 skip_official=0
 skip_aur=0
 
@@ -21,6 +22,8 @@ Options:
   --aur-dir DIR          install packages built by build-aur.sh
   --components DIR       sibling MeowArch component checkouts
   --artifacts DIR        rootfs-shaped compiled component artifacts
+  --protected-package-dir DIR
+                         exact kernel/firmware packages captured from device
   --skip-official        do not run the official package transaction
   --skip-aur             allow a base-only rootfs without the AUR layer
 EOF
@@ -33,6 +36,7 @@ while [ "$#" -gt 0 ]; do
 		--aur-dir) aur_dir=$2; shift 2 ;;
 		--components) components=$2; shift 2 ;;
 		--artifacts) artifacts=$2; shift 2 ;;
+		--protected-package-dir) protected_package_dir=$2; shift 2 ;;
 		--skip-official) skip_official=1; shift ;;
 		--skip-aur) skip_aur=1; shift ;;
 		-h|--help) usage; exit 0 ;;
@@ -66,12 +70,52 @@ while IFS=$'\t' read -r package expected commit arch kind; do
 	aur_names["$package"]=1
 done <"$profile/aur.lock.tsv"
 
+declare -A protected_names=()
+while IFS=$'\t' read -r package version reason; do
+	case "$package" in
+		''|\#*) continue ;;
+	esac
+	protected_names["$package"]="$version"
+done <"$profile/packages.protected.tsv"
+
 protected_version() {
 	awk -F '\t' -v name="$1" '$1 == name {print $2; exit}' "$profile/packages.protected.tsv"
 }
 
 declare -A seen=()
 official_args=()
+protected_files=()
+
+if [ -n "$protected_package_dir" ]; then
+	[ -d "$protected_package_dir" ] || {
+		echo "missing protected package directory: $protected_package_dir" >&2
+		exit 1
+	}
+	shopt -s nullglob
+	for package in "${!protected_names[@]}"; do
+		version=${protected_names[$package]}
+		candidates=("$protected_package_dir/$package-$version-"*.pkg.tar.*)
+		shopt -u nullglob
+		match=
+		for candidate in "${candidates[@]}"; do
+			info=$(pacman --config /dev/null -Qp -i "$candidate")
+			got_package=$(sed -n 's/^Name[[:space:]]*: //p' <<<"$info")
+			got_version=$(sed -n 's/^Version[[:space:]]*: //p' <<<"$info")
+			[ "$got_package" = "$package" ] || continue
+			[ "$got_version" = "$version" ] || continue
+			match=$candidate
+			break
+		done
+		[ -n "$match" ] || {
+			echo "missing exact protected package: $package=$version in $protected_package_dir" >&2
+			exit 1
+		}
+		protected_files+=("$match")
+		shopt -s nullglob
+	done
+	shopt -u nullglob
+fi
+
 for package in "${packages[@]}" "${tools[@]}"; do
 	if [ -n "${aur_names[$package]+yes}" ]; then
 		continue
@@ -80,6 +124,9 @@ for package in "${packages[@]}" "${tools[@]}"; do
 		continue
 	fi
 	seen["$package"]=1
+	if [ -n "$protected_package_dir" ] && [ -n "${protected_names[$package]+yes}" ]; then
+		continue
+	fi
 	version=$(protected_version "$package")
 	if [ -n "$version" ]; then
 		official_args+=("$package=$version")
@@ -95,7 +142,9 @@ while IFS=$'\t' read -r package version reason; do
 	esac
 	if [ -z "${seen[$package]+yes}" ]; then
 		seen["$package"]=1
-		official_args+=("$package=$version")
+		if [ -z "$protected_package_dir" ]; then
+			official_args+=("$package=$version")
+		fi
 	fi
 done <"$profile/packages.protected.tsv"
 
@@ -109,6 +158,15 @@ if [ "$skip_official" -eq 0 ]; then
 	pacman --config "$pacman_conf" --root "$root" \
 		--dbpath "$root/var/lib/pacman" --cachedir "$root/var/cache/pacman/pkg" \
 		"${pacman_sandbox_args[@]}" -Sy --noconfirm
+	if [ "${#protected_files[@]}" -gt 0 ]; then
+		# These packages were reconstructed or captured from the device and are
+		# intentionally installed before resolving ordinary dependencies.  The
+		# normal transaction below then sees the exact protected versions as
+		# already installed instead of selecting a newer repository version.
+		pacman --config "$pacman_conf" --root "$root" \
+			--dbpath "$root/var/lib/pacman" --cachedir "$root/var/cache/pacman/pkg" \
+			"${pacman_sandbox_args[@]}" -U --nodeps --noconfirm "${protected_files[@]}"
+	fi
 	pacman --config "$pacman_conf" --root "$root" \
 		--dbpath "$root/var/lib/pacman" --cachedir "$root/var/cache/pacman/pkg" \
 		"${pacman_sandbox_args[@]}" -S --needed --noconfirm "${official_args[@]}"
