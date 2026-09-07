@@ -70,6 +70,10 @@ explicitly; if the configured mirror no longer carries one, the build fails.
 The target rootfs has a separate pacman database, so the assembly step first
 synchronizes the configured repository databases into that target before
 resolving the official package profile.
+The builder disables pacman's downloader sandbox by default because the
+standard x86-to-ARM64 qemu container does not inherit Landlock support from
+the host kernel; set `MEOWARCH_DISABLE_PACMAN_SANDBOX=0` on a native host
+where Landlock is available.
 
 ## pacman protection
 

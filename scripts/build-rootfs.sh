@@ -46,6 +46,15 @@ root=${root%/}
 [ -f "$pacman_conf" ] || { echo "missing pacman config: $pacman_conf" >&2; exit 1; }
 command -v pacman >/dev/null || { echo "pacman is required" >&2; exit 1; }
 
+# The ARM64 builder commonly runs through qemu-user on an x86 host.  Such a
+# container inherits a host kernel without Landlock, while pacman 7 enables
+# its downloader sandbox by default.  Keep the build usable there; callers
+# with a working Landlock implementation can set this to 0.
+pacman_sandbox_args=()
+if [ "${MEOWARCH_DISABLE_PACMAN_SANDBOX:-1}" = 1 ]; then
+	pacman_sandbox_args+=(--disable-sandbox)
+fi
+
 mapfile -t packages < <(awk 'NF && $1 !~ /^#/ {print $1}' "$profile/packages.explicit")
 mapfile -t tools < <(awk 'NF && $1 !~ /^#/ {print $1}' "$profile/packages.tools")
 
@@ -99,10 +108,10 @@ if [ "$skip_official" -eq 0 ]; then
 	# before resolving the official package set.
 	pacman --config "$pacman_conf" --root "$root" \
 		--dbpath "$root/var/lib/pacman" --cachedir "$root/var/cache/pacman/pkg" \
-		-Sy --noconfirm
+		"${pacman_sandbox_args[@]}" -Sy --noconfirm
 	pacman --config "$pacman_conf" --root "$root" \
 		--dbpath "$root/var/lib/pacman" --cachedir "$root/var/cache/pacman/pkg" \
-		-S --needed --noconfirm "${official_args[@]}"
+		"${pacman_sandbox_args[@]}" -S --needed --noconfirm "${official_args[@]}"
 fi
 
 "$repo_dir/scripts/install-pacman-policy.sh" "$root"
@@ -116,7 +125,7 @@ if [ "$skip_aur" -eq 0 ]; then
 	[ "${#aur_packages[@]}" -gt 0 ] || { echo "no AUR packages in $aur_dir" >&2; exit 1; }
 	pacman --config "$pacman_conf" --root "$root" \
 		--dbpath "$root/var/lib/pacman" --cachedir "$root/var/cache/pacman/pkg" \
-		-U --needed --noconfirm "${aur_packages[@]}"
+		"${pacman_sandbox_args[@]}" -U --needed --noconfirm "${aur_packages[@]}"
 else
 	echo "AUR layer skipped"
 fi
