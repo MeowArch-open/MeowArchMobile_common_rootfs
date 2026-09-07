@@ -179,14 +179,14 @@ if [ "$skip_official" -eq 0 ]; then
 		# already installed instead of selecting a newer repository version.
 		pacman --config "$pacman_conf" --root "$root" \
 			--dbpath "$root/var/lib/pacman" --cachedir "$root/var/cache/pacman/pkg" \
-			"${pacman_sandbox_args[@]}" -U --nodeps --noconfirm "${protected_files[@]}"
+			"${pacman_sandbox_args[@]}" -U --needed --nodeps --noconfirm "${protected_files[@]}"
 	fi
 	if [ "${#compat_files[@]}" -gt 0 ]; then
 		# Compatibility seeds solve transient rolling-repository ABI gaps. They
 		# are not added to the protected-package policy and remain upgradeable.
 		pacman --config "$pacman_conf" --root "$root" \
 			--dbpath "$root/var/lib/pacman" --cachedir "$root/var/cache/pacman/pkg" \
-			"${pacman_sandbox_args[@]}" -U --nodeps --noconfirm "${compat_files[@]}"
+			"${pacman_sandbox_args[@]}" -U --needed --nodeps --noconfirm "${compat_files[@]}"
 	fi
 	pacman --config "$pacman_conf" --root "$root" \
 		--dbpath "$root/var/lib/pacman" --cachedir "$root/var/cache/pacman/pkg" \
