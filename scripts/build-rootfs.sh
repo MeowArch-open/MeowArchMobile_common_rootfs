@@ -215,7 +215,9 @@ if [ "$skip_official" -eq 0 ]; then
 	fi
 	pacman --config "$pacman_conf" --root "$root" \
 		--dbpath "$root/var/lib/pacman" --cachedir "$root/var/cache/pacman/pkg" \
-		"${pacman_sandbox_args[@]}" -S --needed --noconfirm "${official_args[@]}"
+		# Keep the seeded compatibility provider from being replaced by the newer
+		# repository package with an incompatible SONAME.
+		"${pacman_sandbox_args[@]}" -S --needed --noconfirm --ignore aquamarine "${official_args[@]}"
 fi
 
 "$repo_dir/scripts/install-pacman-policy.sh" "$root"
