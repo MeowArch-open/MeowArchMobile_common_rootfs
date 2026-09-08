@@ -2,7 +2,8 @@
 set -euo pipefail
 
 repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-lock="$repo_dir/profiles/zorn/aur.lock.tsv"
+aur_lock="$repo_dir/profiles/zorn/aur.lock.tsv"
+compat_lock="$repo_dir/profiles/zorn/compat.lock.tsv"
 work=${AUR_WORKDIR:-$repo_dir/.work/aur}
 out=${AUR_OUT:-$repo_dir/out/aur}
 
@@ -31,18 +32,16 @@ command -v pacman >/dev/null || { echo "pacman is required" >&2; exit 1; }
 
 mkdir -p "$work" "$out"
 
-while IFS=$'\t' read -r package expected commit arch kind; do
-	case "$package" in
-		''|\#*) continue ;;
-	esac
-
-	dir="$work/$package"
+build_locked_package() {
+	local package=$1 expected=$2 commit=$3 arch=$4 kind=$5 remote=$6
+	local dir="$work/$package"
 	if [ ! -d "$dir/.git" ]; then
-		git clone "https://aur.archlinux.org/$package.git" "$dir"
+		git clone "$remote" "$dir"
 	fi
 	git -C "$dir" fetch --quiet origin "$commit"
 	git -C "$dir" checkout --quiet --detach "$commit"
 
+	local pkgver pkgrel actual
 	pkgver=$(sed -n -E 's/^pkgver=([^#]+).*/\1/p' "$dir/PKGBUILD" | head -n 1)
 	pkgrel=$(sed -n -E 's/^pkgrel=([^#]+).*/\1/p' "$dir/PKGBUILD" | head -n 1)
 	actual="$pkgver-$pkgrel"
@@ -55,6 +54,7 @@ while IFS=$'\t' read -r package expected commit arch kind; do
 	# --nodeps also permits AUR-to-AUR dependencies such as mihomo ->
 	# clash-geoip without modifying the build host's package database.
 	makepkg --dir "$dir" --nodeps --noconfirm --cleanbuild --clean --force
+	local artifacts artifact info got_package got_version got_arch
 	shopt -s nullglob
 	artifacts=("$dir"/*.pkg.tar.*)
 	shopt -u nullglob
@@ -69,8 +69,25 @@ while IFS=$'\t' read -r package expected commit arch kind; do
 		[ "$got_version" = "$expected" ] || { echo "$package: artifact is $got_version" >&2; exit 1; }
 		[ "$got_arch" = "$arch" ] || { echo "$package: artifact arch is $got_arch, lock requires $arch" >&2; exit 1; }
 		cp -f "$artifact" "$out/"
-		echo "$got_package $got_version ($got_arch)"
+		echo "$got_package $got_version ($got_arch, $kind)"
 	done
-done <"$lock"
+}
+
+while IFS=$'\t' read -r package expected commit arch kind; do
+	case "$package" in
+		''|\#*) continue ;;
+	esac
+	build_locked_package "$package" "$expected" "$commit" "$arch" "$kind" \
+		"https://aur.archlinux.org/$package.git"
+done <"$aur_lock"
+
+if [ -f "$compat_lock" ]; then
+	while IFS=$'\t' read -r package expected commit arch kind remote; do
+		case "$package" in
+			''|\#*) continue ;;
+		esac
+		build_locked_package "$package" "$expected" "$commit" "$arch" "$kind" "$remote"
+	done <"$compat_lock"
+fi
 
 echo "AUR packages are in $out"

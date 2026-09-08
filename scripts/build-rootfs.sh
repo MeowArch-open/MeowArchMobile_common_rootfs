@@ -70,12 +70,15 @@ mapfile -t packages < <(awk 'NF && $1 !~ /^#/ {print $1}' "$profile/packages.exp
 mapfile -t tools < <(awk 'NF && $1 !~ /^#/ {print $1}' "$profile/packages.tools")
 
 declare -A aur_names=()
-while IFS=$'\t' read -r package expected commit arch kind; do
-	case "$package" in
-		''|\#*) continue ;;
-	esac
-	aur_names["$package"]=1
-done <"$profile/aur.lock.tsv"
+for package_lock in "$profile/aur.lock.tsv" "$profile/compat.lock.tsv"; do
+	[ -f "$package_lock" ] || continue
+	while IFS=$'\t' read -r package expected commit arch kind remote; do
+		case "$package" in
+			''|\#*) continue ;;
+		esac
+		aur_names["$package"]=1
+	done <"$package_lock"
+done
 
 declare -A protected_names=()
 while IFS=$'\t' read -r package version reason; do

@@ -1,0 +1,4 @@
+# package<TAB>version<TAB>packaging commit<TAB>target architecture<TAB>kind<TAB>repository
+# Hyprland 0.56.1-3 requires libaquamarine.so=13 while the current ARM mirror
+# carries aquamarine 0.15 (SONAME 14). Build the last compatible Arch recipe.
+aquamarine	0.14.0-2	8489a8358817a964a923f05ba324996378d81a5d	aarch64	compat	https://gitlab.archlinux.org/archlinux/packaging/packages/aquamarine.git
