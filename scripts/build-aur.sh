@@ -37,7 +37,7 @@ build_locked_package() {
 	local dir="$work/$package"
 	if [ "$kind" = compat ]; then
 		local build_deps=(cmake hyprutils hyprwayland-scanner libdisplay-info libdrm libglvnd libinput mesa pixman seatd systemd-libs wayland wayland-protocols)
-		sudo pacman -S --needed --noconfirm "${build_deps[@]}"
+		sudo pacman --disable-sandbox -S --needed --noconfirm "${build_deps[@]}"
 	fi
 	if [ ! -d "$dir/.git" ]; then
 		git clone "$remote" "$dir"
