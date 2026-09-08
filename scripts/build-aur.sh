@@ -35,6 +35,10 @@ mkdir -p "$work" "$out"
 build_locked_package() {
 	local package=$1 expected=$2 commit=$3 arch=$4 kind=$5 remote=$6
 	local dir="$work/$package"
+	if [ "$kind" = compat ]; then
+		local build_deps=(cmake hyprutils hyprwayland-scanner libdisplay-info libdrm libglvnd libinput mesa pixman seatd systemd-libs wayland wayland-protocols)
+		sudo pacman -S --needed --noconfirm "${build_deps[@]}"
+	fi
 	if [ ! -d "$dir/.git" ]; then
 		git clone "$remote" "$dir"
 	fi
