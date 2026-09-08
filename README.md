@@ -139,5 +139,12 @@ It installs only runtime service/configuration/firmware material. Kernel
 source and patches remain the responsibility of the kernel build stage; built
 modules and userspace binaries may be supplied through `--artifacts`.
 
+For redistributable automated builds, pass `--public-no-modem` to
+`build-rootfs.sh`. This is an explicit public-edition contract: the private
+Modem checkout is neither required nor inspected, and its services, network
+configuration, firmware and userspace artifacts are omitted. The remaining
+Common, Display, Audio, Touch and Wi-Fi runtime layers are installed normally.
+A build without this option still requires the full private Modem component.
+
 The `temp_work/` directory in the parent extraction tree is not an input to
 this repository and must not be included in a release checkout.

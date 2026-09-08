@@ -1,9 +1,33 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-root=${1:?usage: install-meowarch.sh ROOTFS COMPONENTS [ARTIFACTS]}
-components=${2:?usage: install-meowarch.sh ROOTFS COMPONENTS [ARTIFACTS]}
-artifacts=${3:-}
+usage() {
+	cat <<'EOF'
+usage: install-meowarch.sh ROOTFS COMPONENTS [options]
+
+  --artifacts DIR        rootfs-shaped compiled component artifacts
+  --public-no-modem      omit all private Modem runtime inputs
+EOF
+}
+
+[ "$#" -ge 2 ] || { usage >&2; exit 2; }
+root=$1
+components=$2
+shift 2
+artifacts=
+public_no_modem=0
+if [ "$#" -gt 0 ] && [[ "$1" != --* ]]; then
+	artifacts=$1
+	shift
+fi
+while [ "$#" -gt 0 ]; do
+	case "$1" in
+		--artifacts) artifacts=$2; shift 2 ;;
+		--public-no-modem) public_no_modem=1; shift ;;
+		-h|--help) usage; exit 0 ;;
+		*) echo "unknown option: $1" >&2; usage >&2; exit 2 ;;
+	esac
+done
 root=${root%/}
 [ -n "$root" ] || root=/
 
@@ -114,11 +138,19 @@ if [ -f "$components/touch/services/scripts/zorn-keychord.py" ]; then
 		"$root/usr/local/bin/zorn-keychord.py"
 fi
 
-# Modem runtime files. Build-only source trees, Android references and staged
-# test scripts are intentionally not copied into the target rootfs.
-install_units_and_scripts "$components/modem/services/zorn/systemd" "$components/modem/services/zorn/scripts"
-install_modem_modprobe
-install_network_dir "$components/modem/services/zorn/network"
+# Modem runtime files are available only to private full builds. The public
+# profile never probes the checkout, so absence is an explicit contract rather
+# than a silently incomplete private image.
+if [ "$public_no_modem" -eq 0 ]; then
+	[ -d "$components/modem" ] || {
+		echo "missing private Modem component; use --public-no-modem for a public image" >&2
+		exit 1
+	}
+	install_units_and_scripts "$components/modem/services/zorn/systemd" "$components/modem/services/zorn/scripts"
+	install_modem_modprobe
+	install_network_dir "$components/modem/services/zorn/network"
+	enable_multi_user_units
+fi
 
 # Wi-Fi runtime files. Hostapd/libnl source is built separately; only the
 # target configuration and service enter the rootfs here.
@@ -126,12 +158,9 @@ install_units_and_scripts "$components/wifi/services/systemd" "$components/wifi/
 install_network_dir "$components/wifi/services/network"
 install_dir "$components/wifi/services/network/hostapd" etc/hostapd 0644
 
-enable_multi_user_units
-
-# Component firmware is a direct runtime dependency. Fail on differing
-# collisions rather than silently choosing whichever subsystem was visited
-# last.
-for component in display audio modem; do
+firmware_components=(display audio)
+[ "$public_no_modem" -eq 0 ] && firmware_components+=(modem)
+for component in "${firmware_components[@]}"; do
 	src="$components/$component/firmware/qcom"
 	[ -d "$src" ] || continue
 	while IFS= read -r -d '' file; do

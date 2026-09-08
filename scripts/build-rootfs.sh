@@ -12,6 +12,7 @@ protected_package_dir=
 compat_package_dir=
 skip_official=0
 skip_aur=0
+public_no_modem=0
 
 usage() {
 	cat <<'EOF'
@@ -29,6 +30,7 @@ Options:
                          temporary ABI-coherence seed packages; not protected
   --skip-official        do not run the official package transaction
   --skip-aur             allow a base-only rootfs without the AUR layer
+  --public-no-modem      omit all private Modem runtime inputs
 EOF
 }
 
@@ -43,6 +45,7 @@ while [ "$#" -gt 0 ]; do
 		--compat-package-dir) compat_package_dir=$2; shift 2 ;;
 		--skip-official) skip_official=1; shift ;;
 		--skip-aur) skip_aur=1; shift ;;
+		--public-no-modem) public_no_modem=1; shift ;;
 		-h|--help) usage; exit 0 ;;
 		*) echo "unknown option: $1" >&2; usage >&2; exit 2 ;;
 	esac
@@ -211,7 +214,8 @@ fi
 
 if [ -n "$components" ]; then
 	args=("$root" "$components")
-	[ -n "$artifacts" ] && args+=("$artifacts")
+	[ -n "$artifacts" ] && args+=(--artifacts "$artifacts")
+	[ "$public_no_modem" -eq 1 ] && args+=(--public-no-modem)
 	"$repo_dir/scripts/install-meowarch.sh" "${args[@]}"
 else
 	echo "MeowArch runtime layer skipped; pass --components if required"
