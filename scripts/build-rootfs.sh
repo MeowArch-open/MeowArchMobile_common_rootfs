@@ -96,6 +96,7 @@ declare -A seen=()
 official_args=()
 protected_files=()
 compat_files=()
+aur_packages=()
 
 if [ -n "$protected_package_dir" ]; then
 	[ -d "$protected_package_dir" ] || {
@@ -155,6 +156,17 @@ for package in "${packages[@]}" "${tools[@]}"; do
 	fi
 done
 
+if [ "$skip_aur" -eq 0 ]; then
+	[ -n "$aur_dir" ] || { echo "AUR packages are required; pass --aur-dir or use --skip-aur" >&2; exit 1; }
+	[ -d "$aur_dir" ] || { echo "missing AUR directory: $aur_dir" >&2; exit 1; }
+	shopt -s nullglob
+	aur_packages=("$aur_dir"/*.pkg.tar.*)
+	shopt -u nullglob
+	[ "${#aur_packages[@]}" -gt 0 ] || { echo "no AUR packages in $aur_dir" >&2; exit 1; }
+else
+	echo "AUR layer skipped"
+fi
+
 # Include protected packages that were split out of an explicit package.
 while IFS=$'\t' read -r package version reason; do
 	case "$package" in
@@ -194,26 +206,19 @@ if [ "$skip_official" -eq 0 ]; then
 			--dbpath "$root/var/lib/pacman" --cachedir "$root/var/cache/pacman/pkg" \
 			"${pacman_sandbox_args[@]}" -U --needed --nodeps --noconfirm "${compat_files[@]}"
 	fi
+	if [ "$skip_aur" -eq 0 ]; then
+		# Install local/AUR packages before repository resolution so compatibility
+		# providers (for example aquamarine 0.14) are visible to the solver.
+		pacman --config "$pacman_conf" --root "$root" \
+			--dbpath "$root/var/lib/pacman" --cachedir "$root/var/cache/pacman/pkg" \
+			"${pacman_sandbox_args[@]}" -U --needed --nodeps --noconfirm "${aur_packages[@]}"
+	fi
 	pacman --config "$pacman_conf" --root "$root" \
 		--dbpath "$root/var/lib/pacman" --cachedir "$root/var/cache/pacman/pkg" \
 		"${pacman_sandbox_args[@]}" -S --needed --noconfirm "${official_args[@]}"
 fi
 
 "$repo_dir/scripts/install-pacman-policy.sh" "$root"
-
-if [ "$skip_aur" -eq 0 ]; then
-	[ -n "$aur_dir" ] || { echo "AUR packages are required; pass --aur-dir or use --skip-aur" >&2; exit 1; }
-	[ -d "$aur_dir" ] || { echo "missing AUR directory: $aur_dir" >&2; exit 1; }
-	shopt -s nullglob
-	aur_packages=("$aur_dir"/*.pkg.tar.*)
-	shopt -u nullglob
-	[ "${#aur_packages[@]}" -gt 0 ] || { echo "no AUR packages in $aur_dir" >&2; exit 1; }
-	pacman --config "$pacman_conf" --root "$root" \
-		--dbpath "$root/var/lib/pacman" --cachedir "$root/var/cache/pacman/pkg" \
-		"${pacman_sandbox_args[@]}" -U --needed --noconfirm "${aur_packages[@]}"
-else
-	echo "AUR layer skipped"
-fi
 
 if [ -n "$components" ]; then
 	args=("$root" "$components")
