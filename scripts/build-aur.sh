@@ -35,10 +35,6 @@ mkdir -p "$work" "$out"
 build_locked_package() {
 	local package=$1 expected=$2 commit=$3 arch=$4 kind=$5 remote=$6
 	local dir="$work/$package"
-	if [ "$kind" = compat ]; then
-		local build_deps=(cmake glaze hyprland-protocols hyprwayland-scanner libglvnd mesa meson ninja xorgproto)
-		sudo pacman --disable-sandbox -S --needed --noconfirm "${build_deps[@]}"
-	fi
 	if [ ! -d "$dir/.git" ]; then
 		git clone "$remote" "$dir"
 	fi
@@ -54,27 +50,58 @@ build_locked_package() {
 		exit 1
 	}
 
+	if [ "$kind" = compat ]; then
+		local srcinfo build_deps
+		srcinfo=$(makepkg --dir "$dir" --printsrcinfo)
+		mapfile -t build_deps < <(
+			awk -v target="$package" -v arch="$arch" '
+				function emit(value) {
+					sub(/[<>=].*$/, "", value)
+					if (value != "") print value
+				}
+				$1 == "pkgname" { current = $3; next }
+				$1 == "depends" || $1 == "depends_" arch {
+					if (current == "" || current == target) emit($3)
+					next
+				}
+				$1 == "makedepends" || $1 == "makedepends_" arch ||
+				$1 == "checkdepends" || $1 == "checkdepends_" arch {
+					if (current == "") emit($3)
+				}
+			' <<<"$srcinfo" | sort -u
+		)
+		[ "${#build_deps[@]}" -gt 0 ] || {
+			echo "$package: locked PKGBUILD declares no build dependencies" >&2
+			exit 1
+		}
+		sudo pacman --disable-sandbox -S --needed --noconfirm "${build_deps[@]}"
+	fi
+
+	local artifacts artifact info got_package got_version got_arch found=0
+	mapfile -t artifacts < <(makepkg --dir "$dir" --packagelist)
+	[ "${#artifacts[@]}" -gt 0 ] || { echo "$package: PKGBUILD declares no packages" >&2; exit 1; }
+
 	# Dependencies are installed into the target rootfs as one transaction.
 	# --nodeps also permits AUR-to-AUR dependencies such as mihomo ->
 	# clash-geoip without modifying the build host's package database.
 	makepkg --dir "$dir" --nodeps --noconfirm --cleanbuild --clean --force
-	local artifacts artifact info got_package got_version got_arch
-	shopt -s nullglob
-	artifacts=("$dir"/*.pkg.tar.*)
-	shopt -u nullglob
-	[ "${#artifacts[@]}" -gt 0 ] || { echo "$package: makepkg produced no package" >&2; exit 1; }
-
 	for artifact in "${artifacts[@]}"; do
-		info=$(pacman --config /dev/null -Qp -i "$artifact")
+		[ -f "$artifact" ] || { echo "$package: missing declared artifact: $artifact" >&2; exit 1; }
+		info=$(LC_ALL=C pacman --config /dev/null -Qp -i "$artifact")
 		got_package=$(sed -n 's/^Name[[:space:]]*: //p' <<<"$info")
+		if [ "$got_package" != "$package" ]; then
+			echo "$package: leaving split package out of profile: $got_package"
+			continue
+		fi
 		got_version=$(sed -n 's/^Version[[:space:]]*: //p' <<<"$info")
 		got_arch=$(sed -n 's/^Architecture[[:space:]]*: //p' <<<"$info")
-		[ "$got_package" = "$package" ] || { echo "unexpected package: $artifact" >&2; exit 1; }
 		[ "$got_version" = "$expected" ] || { echo "$package: artifact is $got_version" >&2; exit 1; }
 		[ "$got_arch" = "$arch" ] || { echo "$package: artifact arch is $got_arch, lock requires $arch" >&2; exit 1; }
 		cp -f "$artifact" "$out/"
+		found=1
 		echo "$got_package $got_version ($got_arch, $kind)"
 	done
+	[ "$found" -eq 1 ] || { echo "$package: makepkg did not produce the locked package" >&2; exit 1; }
 }
 
 while IFS=$'\t' read -r package expected commit arch kind; do

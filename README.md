@@ -83,9 +83,12 @@ where Landlock is available.
 
 `compat-pkgs/` is an optional local-only escape hatch for other transient
 rolling-repository ABI gaps. The current Hyprland transition is handled
-reproducibly by `profiles/zorn/compat.lock.tsv`: the ARM builder builds the
-pinned Arch Hyprland 0.56.2 recipe against the mirror's current aquamarine and
-Hypr toolkit stack, then installs it with the other locally built packages.
+reproducibly by `profiles/zorn/compat.lock.tsv`: the ARM builder checks out the
+pinned Arch Hyprland 0.56.2 recipe, installs the target package's declared
+build/runtime dependencies, and builds it against the mirror's current
+aquamarine and Hypr toolkit stack. Arch recipes may produce split packages;
+the builder validates every declared artifact but copies only the package named
+by the compatibility lock into the rootfs package set.
 
 ## pacman protection
 
