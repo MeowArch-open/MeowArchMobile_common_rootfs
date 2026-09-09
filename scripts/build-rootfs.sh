@@ -213,11 +213,10 @@ if [ "$skip_official" -eq 0 ]; then
 			--dbpath "$root/var/lib/pacman" --cachedir "$root/var/cache/pacman/pkg" \
 			"${pacman_sandbox_args[@]}" -U --needed --nodeps --noconfirm "${aur_packages[@]}"
 	fi
-	# Keep the seeded compatibility provider from being replaced by the newer
-	# repository package with an incompatible SONAME.
+	# The pinned Hyprland package is newer than the temporarily stale ARM mirror.
 	pacman --config "$pacman_conf" --root "$root" \
 		--dbpath "$root/var/lib/pacman" --cachedir "$root/var/cache/pacman/pkg" \
-		"${pacman_sandbox_args[@]}" -S --needed --noconfirm --ignore aquamarine "${official_args[@]}"
+		"${pacman_sandbox_args[@]}" -S --needed --noconfirm --ignore hyprland "${official_args[@]}"
 fi
 
 "$repo_dir/scripts/install-pacman-policy.sh" "$root"

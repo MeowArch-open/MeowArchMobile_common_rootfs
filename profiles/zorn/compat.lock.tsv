@@ -1,4 +1,5 @@
 # package<TAB>version<TAB>packaging commit<TAB>target architecture<TAB>kind<TAB>repository
-# Hyprland 0.56.1-3 requires libaquamarine.so=13 while the current ARM mirror
-# carries aquamarine 0.15 (SONAME 14). Build the last compatible Arch recipe.
-aquamarine	0.14.0-2	8489a8358817a964a923f05ba324996378d81a5d	aarch64	compat	https://gitlab.archlinux.org/archlinux/packaging/packages/aquamarine.git
+# The ARM mirror briefly carried Hyprland 0.56.1 (aquamarine ABI 13) beside
+# guiutils/toolkit packages requiring ABI 14. Build the coherent 0.56.2 package
+# against the mirror's aquamarine 0.15 and current Hypr stack.
+hyprland	0.56.2-3	b4da40b4c27baf3032c7a5bc84426f890914d3f9	aarch64	compat	https://gitlab.archlinux.org/archlinux/packaging/packages/hyprland.git

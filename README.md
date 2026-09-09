@@ -82,10 +82,10 @@ the host kernel; set `MEOWARCH_DISABLE_PACMAN_SANDBOX=0` on a native host
 where Landlock is available.
 
 `compat-pkgs/` is an optional local-only escape hatch for other transient
-rolling-repository ABI gaps. The current Hyprland/aquamarine transition is
-handled reproducibly by `profiles/zorn/compat.lock.tsv`: the ARM builder builds
-the pinned Arch aquamarine 0.14 recipe whose SONAME matches the repository's
-Hyprland package, and installs it with the other locally built packages.
+rolling-repository ABI gaps. The current Hyprland transition is handled
+reproducibly by `profiles/zorn/compat.lock.tsv`: the ARM builder builds the
+pinned Arch Hyprland 0.56.2 recipe against the mirror's current aquamarine and
+Hypr toolkit stack, then installs it with the other locally built packages.
 
 ## pacman protection
 
