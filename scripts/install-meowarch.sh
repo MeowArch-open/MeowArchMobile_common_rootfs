@@ -87,7 +87,7 @@ install_units_and_scripts() {
 }
 
 enable_multi_user_units() {
-	local list="$components/modem/services/zorn/enabled-multi-user.txt"
+	local list=${1:?usage: enable_multi_user_units LIST}
 	[ -f "$list" ] || return 0
 	install -d "$root/etc/systemd/system/multi-user.target.wants"
 	while IFS= read -r unit; do
@@ -149,7 +149,7 @@ if [ "$public_no_modem" -eq 0 ]; then
 	install_units_and_scripts "$components/modem/services/zorn/systemd" "$components/modem/services/zorn/scripts"
 	install_modem_modprobe
 	install_network_dir "$components/modem/services/zorn/network"
-	enable_multi_user_units
+	enable_multi_user_units "$components/modem/services/zorn/enabled-multi-user.txt"
 fi
 
 # Wi-Fi runtime files. Hostapd/libnl source is built separately; only the
@@ -158,7 +158,13 @@ install_units_and_scripts "$components/wifi/services/systemd" "$components/wifi/
 install_network_dir "$components/wifi/services/network"
 install_dir "$components/wifi/services/network/hostapd" etc/hostapd 0644
 
-firmware_components=(display audio)
+# Bluetooth runtime files. The WCN7850 boots HCI_UNCONFIGURED, so without
+# zorn-bluetooth-address.service bluetoothd never sees an adapter; see the
+# bluetooth component README.
+install_units_and_scripts "$components/bluetooth/services/systemd" "$components/bluetooth/services/scripts"
+enable_multi_user_units "$components/bluetooth/services/enabled-multi-user.txt"
+
+firmware_components=(display audio bluetooth)
 [ "$public_no_modem" -eq 0 ] && firmware_components+=(modem)
 for component in "${firmware_components[@]}"; do
 	src="$components/$component/firmware/qcom"
