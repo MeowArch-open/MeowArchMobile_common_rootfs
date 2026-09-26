@@ -10,6 +10,7 @@ components=
 artifacts=
 protected_package_dir=
 compat_package_dir=
+charger_auth_input=
 skip_official=0
 skip_aur=0
 public_no_modem=0
@@ -28,6 +29,8 @@ Options:
                          exact kernel/firmware packages captured from device
   --compat-package-dir DIR
                          temporary ABI-coherence seed packages; not protected
+  --charger-auth-input FILE
+                         local root-owned mode-0600 zorn auth record container
   --skip-official        do not run the official package transaction
   --skip-aur             allow a base-only rootfs without the AUR layer
   --public-no-modem      omit all private Modem runtime inputs
@@ -43,6 +46,7 @@ while [ "$#" -gt 0 ]; do
 		--artifacts) artifacts=$2; shift 2 ;;
 		--protected-package-dir) protected_package_dir=$2; shift 2 ;;
 		--compat-package-dir) compat_package_dir=$2; shift 2 ;;
+		--charger-auth-input) charger_auth_input=$2; shift 2 ;;
 		--skip-official) skip_official=1; shift ;;
 		--skip-aur) skip_aur=1; shift ;;
 		--public-no-modem) public_no_modem=1; shift ;;
@@ -228,6 +232,21 @@ if [ -n "$components" ]; then
 	"$repo_dir/scripts/install-meowarch.sh" "${args[@]}"
 else
 	echo "MeowArch runtime layer skipped; pass --components if required"
+fi
+
+if [ -n "$charger_auth_input" ]; then
+	[ -f "$charger_auth_input" ] && [ ! -L "$charger_auth_input" ] || {
+		echo "charger auth input must be a regular non-symlink file" >&2
+		exit 1
+	}
+	read -r auth_uid auth_mode < <(stat -Lc '%u %a' "$charger_auth_input")
+	[ "$auth_uid" = 0 ] && [ "$auth_mode" = 600 ] || {
+		echo "charger auth input must be root-owned and mode 0600" >&2
+		exit 1
+	}
+	install -d -o root -g root -m 0700 "$root/etc/zorn-charger-auth"
+	install -o root -g root -m 0600 "$charger_auth_input" \
+		"$root/etc/zorn-charger-auth/records.bin"
 fi
 
 "$repo_dir/scripts/check-protected.sh" "$root"

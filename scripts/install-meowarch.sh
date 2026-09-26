@@ -162,6 +162,9 @@ install_dir "$components/wifi/services/network/hostapd" etc/hostapd 0644
 # zorn-bluetooth-address.service bluetoothd never sees an adapter; see the
 # bluetooth component README.
 install_units_and_scripts "$components/bluetooth/services/systemd" "$components/bluetooth/services/scripts"
+# Safe-by-default: the file lists validators that skip themselves when their
+# local input is absent (charger auth today).
+enable_multi_user_units "$components/common/services/enabled-multi-user.txt"
 enable_multi_user_units "$components/bluetooth/services/enabled-multi-user.txt"
 
 firmware_components=(display audio bluetooth)
