@@ -1,0 +1,11 @@
+# Experimental / opt-in userspace components for the zorn profile.
+#
+# These are NOT first-class manifest projects and are NOT installed into the
+# default image. They are tracked here so the rootfs profile has a single,
+# reviewable record of the experimental layers a user can opt into on top of
+# the shipped Arch userspace. install-meowarch.sh does not consume this file;
+# it is documentation/policy only (unlike components.lock.tsv, which records
+# the runtime subsystem repositories the installer expects).
+#
+# repository<TAB>upstream<TAB>revision<TAB>role
+MeowShell_Mobile	https://github.com/MeowArch-open/MeowShell_Mobile	1212ac367356557de9de1267acdfef5cd37f3877	experimental Android-like mobile shell (launcher/statusbar/gestures/keys); opt-in, not in the default image

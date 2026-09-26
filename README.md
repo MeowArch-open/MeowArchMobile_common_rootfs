@@ -8,6 +8,12 @@ not contain the Linux kernel, UEFI, or the Display/Audio/Touch/Modem/Wi-Fi
 source trees. Those are separate repositories and are consumed as build
 inputs or runtime artifacts.
 
+The one build artifact source that does live here is the base boot device
+tree, `profiles/zorn/boot/zorn.dts` (see that directory's README). It is the
+tree GRUB loads as `zorn.dtb`; it was consolidated here rather than kept in a
+standalone repository so the base DT travels with the profile that pins the
+rest of the zorn userspace.
+
 ## Device snapshot
 
 The package database was read from the current Arch partition on 2026-09-07
@@ -152,3 +158,17 @@ A build without this option still requires the full private Modem component.
 
 The `temp_work/` directory in the parent extraction tree is not an input to
 this repository and must not be included in a release checkout.
+
+## Experimental components
+
+`profiles/zorn/experimental.tsv` records opt-in userspace layers that are
+deliberately **not** first-class manifest projects and are **not** installed
+into the default image. `install-meowarch.sh` does not consume it; it is a
+policy/record file only.
+
+Currently listed:
+
+- **MeowShell_Mobile** — the experimental Android-like mobile shell
+  (launcher / statusbar / gestures / hardware-key daemon). It is tracked as an
+  experimental component here rather than promoted into the manifest, so the
+  default zorn image stays Plasma-based unless a user explicitly opts in.
