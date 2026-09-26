@@ -112,12 +112,15 @@ install_dir "$components/common/services/ssh" etc/ssh/sshd_config.d 0644
 # Display runtime files.
 install_units_and_scripts "$components/display/services/systemd" "$components/display/services/scripts"
 install_dir "$components/display/services/modprobe" etc/modprobe.d 0644
+install_dir "$components/display/services/modules-load" etc/modules-load.d 0644
 install_dir "$components/display/services/sddm" etc/sddm.conf.d 0644
 install_dir "$components/display/services/sddm-theme" usr/share/sddm/themes/zorn 0644
 
 # Audio runtime files. Bring-up experiments are deliberately not installed by
 # default; they remain available in the source repository for development.
 install_units_and_scripts "$components/audio/services/systemd" "$components/audio/services/scripts"
+install_dir "$components/audio/services/modprobe" etc/modprobe.d 0644
+install_dir "$components/audio/services/alsa/conf.d" etc/alsa/conf.d 0644
 if [ -f "$components/audio/services/ucm/XiaoMi-K80-zorn-zorn.conf" ]; then
 	install -D -m 0644 "$components/audio/services/ucm/XiaoMi-K80-zorn-zorn.conf" \
 		"$root/usr/share/alsa/ucm2/conf.d/sm8650/XiaoMi-K80-zorn-zorn.conf"
@@ -157,6 +160,8 @@ fi
 install_units_and_scripts "$components/wifi/services/systemd" "$components/wifi/services/scripts"
 install_network_dir "$components/wifi/services/network"
 install_dir "$components/wifi/services/network/hostapd" etc/hostapd 0644
+install_dir "$components/wifi/services/NetworkManager/conf.d" etc/NetworkManager/conf.d 0644
+install_dir "$components/wifi/services/NetworkManager/dnsmasq-shared.d" etc/NetworkManager/dnsmasq-shared.d 0644
 
 # Bluetooth runtime files. The WCN7850 boots HCI_UNCONFIGURED, so without
 # zorn-bluetooth-address.service bluetoothd never sees an adapter; see the
@@ -166,21 +171,35 @@ install_units_and_scripts "$components/bluetooth/services/systemd" "$components/
 # local input is absent (charger auth today).
 enable_multi_user_units "$components/common/services/enabled-multi-user.txt"
 enable_multi_user_units "$components/bluetooth/services/enabled-multi-user.txt"
+enable_multi_user_units "$components/display/services/enabled-multi-user.txt"
+enable_multi_user_units "$components/audio/services/enabled-multi-user.txt"
+
+# Mask the host-integration services the zorn stack replaces. The modem is
+# driven by the zorn-* QMI services rather than ModemManager, and networking by
+# NetworkManager rather than systemd-networkd; the running device masks all
+# three (symlink to /dev/null) so mirror that here or they race the zorn stack.
+for masked in ModemManager.service systemd-networkd.service systemd-networkd.socket; do
+	ln -sfn /dev/null "$root/etc/systemd/system/$masked"
+done
 
 firmware_components=(display audio bluetooth)
 [ "$public_no_modem" -eq 0 ] && firmware_components+=(modem)
 for component in "${firmware_components[@]}"; do
-	src="$components/$component/firmware/qcom"
-	[ -d "$src" ] || continue
-	while IFS= read -r -d '' file; do
-		rel=${file#"$src/"}
-		dest="$root/usr/lib/firmware/qcom/$rel"
-		if [ -e "$dest" ] && ! cmp -s "$file" "$dest"; then
-			echo "firmware collision: $dest" >&2
-			exit 1
-		fi
-		install -D -m 0644 "$file" "$dest"
-	done < <(find "$src" -type f -print0)
+	# A component may ship firmware either flat under firmware/qcom or namespaced
+	# (the Display repo keeps the Adreno GPU blobs under firmware/gpu/qcom); both
+	# land in /usr/lib/firmware/qcom preserving any subtree (e.g. sm8650/).
+	for src in "$components/$component/firmware/qcom" "$components/$component/firmware/gpu/qcom"; do
+		[ -d "$src" ] || continue
+		while IFS= read -r -d '' file; do
+			rel=${file#"$src/"}
+			dest="$root/usr/lib/firmware/qcom/$rel"
+			if [ -e "$dest" ] && ! cmp -s "$file" "$dest"; then
+				echo "firmware collision: $dest" >&2
+				exit 1
+			fi
+			install -D -m 0644 "$file" "$dest"
+		done < <(find "$src" -type f -print0)
+	done
 done
 
 # Optional output from the kernel/userspace component build stages. It must be

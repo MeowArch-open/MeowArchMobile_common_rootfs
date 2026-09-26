@@ -6,9 +6,11 @@ alsa-utils
 archlinuxarm-keyring
 base
 base-devel
+bluez-utils
 cc-switch-bin
 cmake
 dhcpcd
+dnsmasq
 duktape
 ex-vi-compat
 f2fs-tools
@@ -43,12 +45,14 @@ openssh
 pcsclite
 plasma-meta
 polkit
+power-profiles-daemon
 ppp
 python
 rustdesk-bin
 sddm
 seatd
 visual-studio-code-bin
+vulkan-freedreno
 wget
 which
 wireless-regdb
