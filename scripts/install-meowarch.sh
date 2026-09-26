@@ -108,6 +108,12 @@ enable_multi_user_units() {
 install_units_and_scripts "$components/common/services/systemd" "$components/common/services/scripts"
 install_network_dir "$components/common/services/network"
 install_dir "$components/common/services/ssh" etc/ssh/sshd_config.d 0644
+# Sensor HexagonFS data for the ADSP sensor PD. Vendor-derived (not
+# source-reproducible, like firmware); the running root daemon serves and
+# rewrites it, so it lands under /var/lib. hexagonrpcd.service
+# ConditionPathIsDirectory-guards on this path, so a build without the tree
+# simply skips the sensor bring-up rather than failing.
+install_dir "$components/common/services/sensors/hexfs" var/lib/hexagonrpcd/hexfs 0644
 
 # Display runtime files.
 install_units_and_scripts "$components/display/services/systemd" "$components/display/services/scripts"
