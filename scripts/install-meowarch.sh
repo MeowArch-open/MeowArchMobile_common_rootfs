@@ -182,6 +182,34 @@ for masked in ModemManager.service systemd-networkd.service systemd-networkd.soc
 	ln -sfn /dev/null "$root/etc/systemd/system/$masked"
 done
 
+# Enable the stock distribution units the running device has active but a fresh
+# pacstrap leaves disabled (Arch's default preset is "disable *"). Without these
+# the reproduced image boots with no display manager, no networking, no name
+# resolution and no console getty. systemctl --root only rewrites the [Install]
+# symlinks (it executes nothing) so it is safe to run cross-architecture on the
+# build host; each enable is non-fatal and we degrade to a warning if that host
+# has no systemctl at all.
+stock_units=(
+	sddm.service
+	NetworkManager.service
+	NetworkManager-wait-online.service
+	sshd.service
+	bluetooth.service
+	systemd-resolved.service
+	systemd-timesyncd.service
+	getty@tty1.service
+)
+if command -v systemctl >/dev/null 2>&1; then
+	for unit in "${stock_units[@]}"; do
+		systemctl --root="$root" enable "$unit" \
+			|| echo "warning: could not enable stock unit: $unit" >&2
+	done
+	systemctl --root="$root" set-default graphical.target \
+		|| echo "warning: could not set default target to graphical.target" >&2
+else
+	echo "warning: no systemctl on build host; stock units left disabled: ${stock_units[*]}" >&2
+fi
+
 firmware_components=(display audio bluetooth)
 [ "$public_no_modem" -eq 0 ] && firmware_components+=(modem)
 for component in "${firmware_components[@]}"; do
